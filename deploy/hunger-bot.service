@@ -1,0 +1,22 @@
+[Unit]
+Description=Hunger diary Telegram bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hungerbot
+Group=hungerbot
+WorkingDirectory=/opt/hunger-bot
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/opt/hunger-bot/.env
+ExecStart=/opt/hunger-bot/.venv/bin/python -m bot
+Restart=always
+RestartSec=10
+
+# Safety
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

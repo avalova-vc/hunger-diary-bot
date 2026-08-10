@@ -8,3 +8,6 @@ venv/
 *.db
 .DS_Store
 Thumbs.db
+deploy/secrets.env
+deploy/*.pem
+deploy/id_*

@@ -243,6 +243,8 @@ Excel в Windows открывает UTF-8 CSV с BOM (`utf-8-sig`) — учес�
 - Бот как **systemd-сервис** — автозапуск и перезапуск при падении.
 - Polling, без домена.
 - Ориентир: **€3–5 / мес** или аналог в рублях.
+- Инструкция и скрипты: `DEPLOY.md`, `deploy/install.sh`, `deploy/hunger-bot.service`.
+- При блокировке Telegram на VPS — `HTTPS_PROXY` в `.env`.
 
 ### Вариант C — домашний always-on сервер
 

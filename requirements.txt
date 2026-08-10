@@ -3,3 +3,4 @@ SQLAlchemy==2.0.43
 apscheduler==3.11.0
 python-dotenv==1.1.1
 tzdata==2025.2
+aiohttp-socks==0.11.0
