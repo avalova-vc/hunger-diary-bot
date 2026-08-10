@@ -1,57 +1,115 @@
-# Дневник голода и питания — Telegram-бот (MVP)
+# Hunger Diary Bot
 
-Личный бот для записи чувства голода (0–10) и приёмов пищи. Данные сохраняются в SQLite и выгружаются в CSV.
+Telegram-бот — **личный дневник чувства голода и приёмов пищи**.
 
-Подробности: `CONTEXT.md`, `ARCHITECTURE.md`, `UI_COPY.md`.
+Не диетолог и не система рекомендаций: бот только помогает быстро фиксировать факты (голод 0–10, приём пищи) и выгружать данные в CSV для анализа в Excel.
 
-## Требования
+> Не заменяет врача или специалиста по РПП.
 
-- **Python 3.12** (рекомендуется; системный 3.14 пока плохо поддерживается пакетами бота)
-- Telegram Bot Token и ваш User ID в `.env`
-- Git (для версионирования)
+## Возможности (MVP)
 
-## Установка
+| Функция | Описание |
+|---------|----------|
+| Голод | Запись уровня 0–10 в любой момент |
+| Поела | Тип приёма (завтрак / перекус / обед / ужин) → голод до → сытость после |
+| Напоминания | Утром + до 2 напоминаний при тишине 2 часа |
+| Экспорт | CSV для Excel |
+| Доступ | Один пользователь (whitelist по Telegram ID) |
 
-```powershell
-cd "C:\Users\Amsterdam\Desktop\cursor folder\бот чувства голода"
-py -3.12 -m venv .venv
-.\.venv\Scripts\Activate.ps1
+Интерфейс на **русском**. Перекусов за день — сколько угодно.
+
+## Быстрый старт
+
+### 1. Что нужно
+
+- Python **3.12**
+- Токен бота от [@BotFather](https://t.me/BotFather)
+- Ваш Telegram user ID (например, [@userinfobot](https://t.me/userinfobot))
+
+### 2. Установка
+
+```bash
+git clone https://github.com/avalova-vc/hunger-diary-bot.git
+cd hunger-diary-bot
+
+python3.12 -m venv .venv
+
+# Linux / macOS
+source .venv/bin/activate
+
+# Windows PowerShell
+# .\.venv\Scripts\Activate.ps1
+
 pip install -r requirements.txt
+cp .env.example .env
 ```
 
-Скопируйте `.env.example` в `.env` (если ещё нет) и заполните:
+Заполните `.env`:
 
 ```env
-BOT_TOKEN=...
-ALLOWED_USER_ID=...
+BOT_TOKEN=123456:ABC...
+ALLOWED_USER_ID=123456789
 WAKE_UP_TIME=07:00
 TIMEZONE=Europe/Moscow
 SLEEP_TIME=23:00
 ```
 
-## Запуск
+### 3. Запуск
 
-```powershell
+```bash
 python -m bot
 ```
 
-В Telegram напишите боту `/start`.
+В Telegram откройте бота и отправьте `/start`.
 
-**Важно:** на ПК напоминания работают только пока запущен этот процесс.
+На ПК бот работает **только пока запущен процесс**. Для 24/7 см. [DEPLOY.md](DEPLOY.md).
 
-## Постоянная работа (VPS)
-
-См. [`DEPLOY.md`](DEPLOY.md) — systemd-служба и скрипт `deploy/install.sh`.
-
-## Команды
+## Команды в боте
 
 | Действие | Как |
 |----------|-----|
-| Голод | кнопка «Голод» или `/hunger` |
-| Приём пищи | кнопка «Поела» или `/meal` |
-| Экспорт CSV | кнопка «Экспорт» или `/export` |
+| Голод | кнопка **Голод** или `/hunger` |
+| Приём пищи | кнопка **Поела** или `/meal` |
+| Экспорт CSV | кнопка **Экспорт** или `/export` |
 | Время пробуждения | `/settings` |
 
-## Git
+## Структура проекта
 
-`.env`, `data/`, `exports/` и виртуальное окружение **не** коммитятся (см. `.gitignore`).
+```
+hunger-diary-bot/
+├── bot/                 # код бота (aiogram 3)
+│   ├── handlers/        # команды и сценарии
+│   ├── services/        # CSV, логика напоминаний
+│   ├── models/          # SQLAlchemy / SQLite
+│   └── ...
+├── deploy/              # systemd + install.sh для VPS
+├── CONTEXT.md           # продукт и границы MVP
+├── ARCHITECTURE.md      # техническая архитектура
+├── UI_COPY.md           # тексты кнопок и сообщений
+├── DEPLOY.md            # установка на сервер
+├── .env.example         # шаблон настроек
+└── requirements.txt
+```
+
+## Документация
+
+| Файл | Зачем читать |
+|------|----------------|
+| [CONTEXT.md](CONTEXT.md) | Идея, MVP, что сознательно не делаем |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Стек, БД, напоминания, деплой |
+| [UI_COPY.md](UI_COPY.md) | Все тексты интерфейса |
+| [DEPLOY.md](DEPLOY.md) | VPS + systemd |
+
+## Безопасность
+
+- Файл `.env` **не коммитьте** (он в `.gitignore`)
+- `BOT_TOKEN` — секрет; при утечке отзовите в BotFather
+- Бот отвечает только `ALLOWED_USER_ID`
+
+## Стек
+
+Python 3.12 · aiogram 3 · SQLite · APScheduler · systemd (на VPS)
+
+## Лицензия
+
+[MIT](LICENSE)

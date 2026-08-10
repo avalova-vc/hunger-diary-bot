@@ -1,92 +1,99 @@
-# Деплой на VPS (Ubuntu)
+# Деплой на VPS (Ubuntu 22.04 / 24.04)
 
-Бот работает 24/7 как systemd-служба в `/opt/hunger-bot`.
+Бот как systemd-служба в `/opt/hunger-bot`: автозапуск после перезагрузки и рестарт при падении.
 
-## Важно про ваши адреса
+## Требования
 
-| Адрес | Тип | Заметка |
-|-------|-----|---------|
-| `107.189.25.3` | публичный IPv4 | Основной адрес для SSH |
-| `2602:fa59:5:868::1` | публичный IPv6 | Запасной, если IPv4 недоступен |
+- VPS с Ubuntu и доступом по SSH
+- Python 3.12 (скрипт установки поставит сам)
+- Заполненный `.env` (токен и ваш Telegram ID)
+- С сервера должен открываться `https://api.telegram.org`  
+  (если нет — укажите `HTTPS_PROXY` в `.env`)
 
----
+## Безопасный SSH (рекомендуется)
 
-## Безопасный доступ (пароли не в чат)
-
-1. На ПК запустите: `deploy\make-ssh-key.ps1` — создаст ключ `~\.ssh\id_ed25519_hungerbot`.
-2. **Публичный** ключ (файл `.pub` или вывод скрипта) добавьте на VPS:
-   - в панели хостинга → SSH Keys, **или**
-   - один раз у себя в терминале по паролю (пароль вводите только локально):
+1. Создайте ключ на своём ПК:
 
 ```powershell
-type $env:USERPROFILE\.ssh\id_ed25519_hungerbot.pub | ssh root@107.189.25.3 "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
+# Windows
+.\deploy\make-ssh-key.ps1
 ```
-
-3. Приватный ключ и пароль **никогда не присылайте в чат**.
-4. Локальные настройки хоста: `deploy/secrets.env` (в `.gitignore`).
-
-Когда ключ добавлен, напишите: «ключ добавлен, можно деплоить».
-
----
-
-## Вариант A — я ставлю по SSH (после доступа по ключу)
-
-1. Проверить `curl -I https://api.telegram.org`
-2. Скопировать проект + `.env`
-3. Запустить `deploy/install.sh`
-4. Проверить `systemctl status hunger-bot` и ответ бота на `/start`
-
-Если Telegram с VPS недоступен — добавим в `.env` строку `HTTPS_PROXY=...`.
-
----
-
-## Вариант B — сами на сервере
-
-### 1. Подключиться
 
 ```bash
-ssh USER@VPS_IP
+# Linux / macOS
+ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_hungerbot -C "hungerbot-deploy"
 ```
 
-### 2. Загрузить проект
+2. Добавьте **публичный** ключ (`.pub`) на сервер — в панели хостинга или так:
 
-С вашего ПК (PowerShell), из папки проекта:
+```bash
+ssh-copy-id -i ~/.ssh/id_ed25519_hungerbot.pub USER@VPS_IP
+```
+
+Windows (PowerShell), пароль вводите только локально:
 
 ```powershell
-scp -r . USER@VPS_IP:~/hunger-bot
+type $env:USERPROFILE\.ssh\id_ed25519_hungerbot.pub | ssh USER@VPS_IP "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
 ```
 
-### 3. Установить
+3. Приватный ключ и пароли **не публикуйте** и не коммитьте.  
+   Локально можно хранить хост в `deploy/secrets.env` (файл в `.gitignore`, см. `deploy/secrets.example.env`).
 
-На VPS:
+## Установка
+
+### 1. Скопируйте проект на сервер
 
 ```bash
-cd ~/hunger-bot
+# с вашего компьютера
+scp -r . USER@VPS_IP:~/hunger-diary-bot
+```
+
+Или клонируйте репозиторий прямо на VPS (если он доступен серверу).
+
+### 2. Положите `.env`
+
+На сервере в корне проекта должен быть `.env` (скопируйте с ПК или создайте из `.env.example`).
+
+### 3. Запустите установщик
+
+```bash
+cd ~/hunger-diary-bot
 sudo bash deploy/install.sh
 ```
 
-### 4. Проверить `.env` и логи
+Скрипт:
+
+- ставит Python 3.12 и зависимости
+- создаёт системного пользователя `hungerbot`
+- копирует код в `/opt/hunger-bot` (каталог `data/` не затирается)
+- включает службу `hunger-bot`
+
+### 4. Проверьте
 
 ```bash
-sudo nano /opt/hunger-bot/.env
-sudo systemctl restart hunger-bot
 sudo systemctl status hunger-bot
-sudo journalctl -u hunger-bot -f
+sudo journalctl -u hunger-bot -n 50 --no-pager
 ```
 
-Опционально при блокировке Telegram:
-```env
-HTTPS_PROXY=http://127.0.0.1:1080
-```
-
----
+В Telegram: `/start`.
 
 ## Полезные команды
 
 | Действие | Команда |
 |----------|---------|
+| Статус | `sudo systemctl status hunger-bot` |
 | Перезапуск | `sudo systemctl restart hunger-bot` |
-| Логи | `sudo journalctl -u hunger-bot -n 100` |
-| Обновить код | снова `sudo bash deploy/install.sh` |
+| Логи | `sudo journalctl -u hunger-bot -f` |
+| Обновить код | снова `sudo bash deploy/install.sh` из новой копии проекта |
 
-Данные (SQLite): `/opt/hunger-bot/data/` — при обновлении не удаляются.
+База SQLite: `/opt/hunger-bot/data/bot.db`.
+
+## Прокси до Telegram
+
+Если с VPS нет доступа к API:
+
+```env
+HTTPS_PROXY=http://127.0.0.1:1080
+```
+
+Затем: `sudo systemctl restart hunger-bot`.

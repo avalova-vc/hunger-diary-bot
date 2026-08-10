@@ -1,7 +1,7 @@
 # Техническая архитектура MVP
 
-> Telegram-бот «Режим питания по чувству голода»  
-> Сверяться с: `CONTEXT.md`
+> Telegram-бот «Дневник голода и питания»  
+> Продукт: [CONTEXT.md](CONTEXT.md) · Запуск: [README.md](README.md) · VPS: [DEPLOY.md](DEPLOY.md)
 
 ---
 
