@@ -96,6 +96,7 @@ hunger-diary-bot/
 | Файл | Зачем читать |
 |------|----------------|
 | [CONTEXT.md](CONTEXT.md) | Идея, MVP, что сознательно не делаем |
+| [SUMMARY.md](SUMMARY.md) | Статус, решения, ссылки, подводные камни |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Стек, БД, напоминания, деплой |
 | [UI_COPY.md](UI_COPY.md) | Все тексты интерфейса |
 | [DEPLOY.md](DEPLOY.md) | VPS + systemd |
