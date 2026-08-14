@@ -20,35 +20,42 @@ def setup_scheduler(bot: Bot, repo: Repository, config: Config) -> AsyncIOSchedu
     scheduler = AsyncIOScheduler(timezone=config.timezone)
 
     async def morning_job() -> None:
-        if not should_send_morning(repo):
-            return
-        await bot.send_message(
-            config.allowed_user_id,
-            MSG_MORNING,
-            reply_markup=scale_keyboard("hunger", with_cancel=False),
-        )
-        repo.log_reminder("morning")
-        logger.info("Sent morning reminder")
+        for user in config.users.values():
+            if not should_send_morning(
+                repo,
+                user.user_id,
+                default_wake_up=user.wake_up_time,
+            ):
+                continue
+            await bot.send_message(
+                user.user_id,
+                MSG_MORNING,
+                reply_markup=scale_keyboard("hunger", with_cancel=False),
+            )
+            repo.log_reminder(user.user_id, "morning")
+            logger.info("Sent morning reminder to user_id=%s", user.user_id)
 
     async def inactivity_job() -> None:
-        decision = decide_inactivity(repo, config.sleep_time)
-        if decision.kind is None:
-            return
+        for user in config.users.values():
+            decision = decide_inactivity(
+                repo,
+                user.user_id,
+                config.sleep_time,
+                user.inactivity_hours,
+                default_wake_up=user.wake_up_time,
+            )
+            if decision.kind is None:
+                continue
 
-        if decision.kind == "inactivity_1":
-            text = MSG_INACTIVITY_1
-        else:
-            text = MSG_INACTIVITY_2
+            text = MSG_INACTIVITY_1 if decision.kind == "inactivity_1" else MSG_INACTIVITY_2
+            await bot.send_message(
+                user.user_id,
+                text,
+                reply_markup=scale_keyboard("hunger", with_cancel=False),
+            )
+            repo.log_reminder(user.user_id, decision.kind)
+            logger.info("Sent %s reminder to user_id=%s", decision.kind, user.user_id)
 
-        await bot.send_message(
-            config.allowed_user_id,
-            text,
-            reply_markup=scale_keyboard("hunger", with_cancel=False),
-        )
-        repo.log_reminder(decision.kind)
-        logger.info("Sent %s reminder", decision.kind)
-
-    # Check every minute near wake-up; cheap for one user
     scheduler.add_job(morning_job, CronTrigger(minute="*", timezone=config.timezone))
     scheduler.add_job(inactivity_job, IntervalTrigger(minutes=15))
     return scheduler

@@ -25,7 +25,12 @@ async def ask_hunger(message: Message, state: FSMContext) -> None:
 
 
 @router.callback_query(F.data.startswith("hunger:"))
-async def save_hunger(callback: CallbackQuery, state: FSMContext, repo: Repository) -> None:
+async def save_hunger(
+    callback: CallbackQuery,
+    state: FSMContext,
+    repo: Repository,
+    user_id: int,
+) -> None:
     assert callback.data is not None
     assert callback.message is not None
     value = callback.data.split(":", 1)[1]
@@ -37,7 +42,7 @@ async def save_hunger(callback: CallbackQuery, state: FSMContext, repo: Reposito
         return
 
     level = int(value)
-    event = repo.add_hunger(level)
+    event = repo.add_hunger(user_id, level)
     hhmm = format_local_time(event.created_at, repo.timezone_name)
     await callback.message.edit_text(msg_hunger_saved(level, hhmm))
     await callback.answer()

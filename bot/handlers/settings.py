@@ -17,7 +17,12 @@ TIME_RE = re.compile(r"^([01]?\d|2[0-3]):([0-5]\d)$")
 
 
 @router.message(SettingsStates.waiting_time)
-async def set_wake_up(message: Message, state: FSMContext, repo: Repository) -> None:
+async def set_wake_up(
+    message: Message,
+    state: FSMContext,
+    repo: Repository,
+    user_id: int,
+) -> None:
     text = (message.text or "").strip()
     if not TIME_RE.match(text):
         await message.answer(MSG_SETTINGS_BAD)
@@ -25,6 +30,6 @@ async def set_wake_up(message: Message, state: FSMContext, repo: Repository) -> 
 
     hour, minute = text.split(":")
     normalized = f"{int(hour):02d}:{int(minute):02d}"
-    wake = repo.update_wake_up_time(normalized)
+    wake = repo.update_wake_up_time(user_id, normalized)
     await state.clear()
     await message.answer(msg_settings_updated(wake), reply_markup=main_menu())

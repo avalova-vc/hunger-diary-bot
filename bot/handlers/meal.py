@@ -77,7 +77,12 @@ async def choose_hunger_before(callback: CallbackQuery, state: FSMContext) -> No
 
 
 @router.callback_query(MealStates.satiety_after, F.data.startswith("meal_satiety:"))
-async def choose_satiety(callback: CallbackQuery, state: FSMContext, repo: Repository) -> None:
+async def choose_satiety(
+    callback: CallbackQuery,
+    state: FSMContext,
+    repo: Repository,
+    user_id: int,
+) -> None:
     assert callback.data is not None
     assert callback.message is not None
     value = callback.data.split(":", 1)[1]
@@ -93,7 +98,7 @@ async def choose_satiety(callback: CallbackQuery, state: FSMContext, repo: Repos
     hunger_before = data["hunger_before"]
     satiety_after = int(value)
 
-    event = repo.add_meal(meal_type, hunger_before, satiety_after)
+    event = repo.add_meal(user_id, meal_type, hunger_before, satiety_after)
     hhmm = format_local_time(event.created_at, repo.timezone_name)
     label = MEAL_LABELS[meal_type]
     await callback.message.edit_text(msg_meal_saved(label, hunger_before, satiety_after, hhmm))

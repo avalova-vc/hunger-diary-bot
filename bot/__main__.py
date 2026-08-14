@@ -38,7 +38,6 @@ def resolve_https_proxy() -> str | None:
 def build_session() -> AiohttpSession:
     proxy = resolve_https_proxy()
     session = AiohttpSession(proxy=proxy) if proxy else AiohttpSession()
-    # Prefer IPv4 when connecting directly (no proxy)
     if not proxy:
         session._connector_init["family"] = socket.AF_INET
     if proxy:
@@ -53,16 +52,21 @@ async def main() -> None:
     )
 
     config = load_config()
-    session_factory = create_session_factory(str(config.db_path))
-    repo = Repository(session_factory, config.timezone, config.wake_up_time)
-    repo.ensure_settings()
+    session_factory = create_session_factory(
+        str(config.db_path),
+        config.legacy_user_id,
+        list(config.allowed_user_ids),
+    )
+    repo = Repository(session_factory, config.timezone)
+    for user in config.users.values():
+        repo.ensure_settings(user.user_id, user.wake_up_time)
 
     bot = Bot(token=config.bot_token, session=build_session())
     dp = Dispatcher(storage=MemoryStorage())
     dp["repo"] = repo
     dp["config"] = config
 
-    access = AccessMiddleware(config.allowed_user_id)
+    access = AccessMiddleware(frozenset(config.allowed_user_ids))
     dp.message.middleware(access)
     dp.callback_query.middleware(access)
 
@@ -71,7 +75,7 @@ async def main() -> None:
     scheduler = setup_scheduler(bot, repo, config)
     scheduler.start()
 
-    logger.info("Bot started for user_id=%s", config.allowed_user_id)
+    logger.info("Bot started for user_ids=%s", ",".join(str(uid) for uid in config.allowed_user_ids))
     try:
         while True:
             try:

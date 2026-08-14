@@ -93,7 +93,7 @@ flowchart TB
 ### 4.1 Telegram Handler
 
 - Режим подключения: **long polling** (проще для MVP, не нужен домен и HTTPS).
-- Доступ: **whitelist по Telegram user ID** — бот отвечает только вам, остальным — «бот недоступен».
+- Доступ: **whitelist по Telegram user ID** (`ALLOWED_USER_IDS`, до 2) — бот отвечает только им.
 - Интерфейс: **inline-кнопки** (0–10, тип приёма) + постоянное **reply-меню** («Голод», «Поела», «Экспорт»).
 
 ### 4.2 FSM — сценарий «Поела»
@@ -175,10 +175,11 @@ Excel в Windows открывает UTF-8 CSV с BOM (`utf-8-sig`) — учес�
 
 ## 5. Модель данных
 
-### Таблица `settings` (одна строка)
+### Таблица `settings` (строка на пользователя)
 
 | Поле | Тип | Описание |
 |------|-----|----------|
+| `user_id` | INTEGER PK | Telegram user ID |
 | `wake_up_time` | TIME | Время утреннего напоминания, напр. `08:00` |
 | `timezone` | TEXT | IANA, напр. `Europe/Kyiv` |
 
@@ -187,6 +188,7 @@ Excel в Windows открывает UTF-8 CSV с BOM (`utf-8-sig`) — учес�
 | Поле | Тип | Описание |
 |------|-----|----------|
 | `id` | INTEGER PK | |
+| `user_id` | INTEGER | Telegram user ID |
 | `created_at` | DATETIME | UTC в БД; отображение — в local TZ |
 | `event_type` | TEXT | `hunger` \| `meal` |
 | `hunger_level` | INTEGER NULL | 0–10 |
@@ -201,6 +203,7 @@ Excel в Windows открывает UTF-8 CSV с BOM (`utf-8-sig`) — учес�
 | Поле | Тип | Описание |
 |------|-----|----------|
 | `id` | INTEGER PK | |
+| `user_id` | INTEGER | Telegram user ID |
 | `sent_at` | DATETIME | Когда отправлено |
 | `reminder_type` | TEXT | `morning` \| `inactivity_1` \| `inactivity_2` |
 
@@ -222,7 +225,7 @@ Excel в Windows открывает UTF-8 CSV с BOM (`utf-8-sig`) — учес�
 
 ## 7. Безопасность (MVP)
 
-- `BOT_TOKEN` и `ALLOWED_USER_ID` — только в `.env`, файл в `.gitignore`.
+- `BOT_TOKEN` и `ALLOWED_USER_IDS` — только в `.env`, файл в `.gitignore`.
 - Бот не принимает команды от других user ID.
 - БД и экспорты — локально на машине/сервере, где крутится бот.
 - Резервная копия: периодически скачивать CSV через `/export` (ручной бэкап достаточен для MVP).
@@ -306,8 +309,11 @@ Excel в Windows открывает UTF-8 CSV с BOM (`utf-8-sig`) — учес�
 
 ```env
 BOT_TOKEN=123456789:ABCdefGHIjklMNOpqrsTUVwxyz
-ALLOWED_USER_ID=123456789
-WAKE_UP_TIME=08:00
+ALLOWED_USER_IDS=123456789,987654321
+USER_123456789_WAKE_UP=08:00
+USER_123456789_INACTIVITY_HOURS=2
+USER_987654321_WAKE_UP=07:30
+USER_987654321_INACTIVITY_HOURS=3
 TIMEZONE=Europe/Kyiv
 # опционально, для тихих часов:
 # SLEEP_TIME=23:00

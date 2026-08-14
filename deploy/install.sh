@@ -51,7 +51,7 @@ if [[ ! -f "${APP_DIR}/.env" ]]; then
     echo "Скопирован .env с машины деплоя."
   else
     cp "${APP_DIR}/.env.example" "${APP_DIR}/.env"
-    echo "Создан ${APP_DIR}/.env из примера — ЗАПОЛНИТЕ BOT_TOKEN и ALLOWED_USER_ID."
+    echo "Создан ${APP_DIR}/.env из примера — ЗАПОЛНИТЕ BOT_TOKEN и ALLOWED_USER_IDS."
   fi
 fi
 

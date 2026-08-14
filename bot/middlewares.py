@@ -9,8 +9,8 @@ from bot.texts import MSG_FORBIDDEN
 
 
 class AccessMiddleware(BaseMiddleware):
-    def __init__(self, allowed_user_id: int):
-        self.allowed_user_id = allowed_user_id
+    def __init__(self, allowed_user_ids: frozenset[int]):
+        self.allowed_user_ids = allowed_user_ids
 
     async def __call__(
         self,
@@ -22,11 +22,12 @@ class AccessMiddleware(BaseMiddleware):
         if user is None:
             return None
 
-        if user.id != self.allowed_user_id:
+        if user.id not in self.allowed_user_ids:
             if isinstance(event, Message):
                 await event.answer(MSG_FORBIDDEN)
             elif isinstance(event, CallbackQuery):
                 await event.answer(MSG_FORBIDDEN, show_alert=True)
             return None
 
+        data["user_id"] = user.id
         return await handler(event, data)

@@ -7,8 +7,8 @@ from pathlib import Path
 from bot.repositories import MEAL_LABELS, Repository, format_local_iso
 
 
-def export_events_to_csv(repo: Repository, exports_dir: Path) -> tuple[Path | None, int]:
-    events = repo.list_events()
+def export_events_to_csv(repo: Repository, user_id: int, exports_dir: Path) -> tuple[Path | None, int]:
+    events = repo.list_events(user_id)
     if not events:
         return None, 0
 

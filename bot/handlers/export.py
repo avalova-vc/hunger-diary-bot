@@ -16,11 +16,17 @@ router = Router()
 
 @router.message(Command("export"))
 @router.message(F.text == BTN_EXPORT)
-async def export_data(message: Message, state: FSMContext, repo: Repository, config: Config) -> None:
+async def export_data(
+    message: Message,
+    state: FSMContext,
+    repo: Repository,
+    config: Config,
+    user_id: int,
+) -> None:
     await state.clear()
     await message.answer(MSG_EXPORT_START)
 
-    path, count = export_events_to_csv(repo, config.exports_dir)
+    path, count = export_events_to_csv(repo, user_id, config.exports_dir)
     if path is None:
         await message.answer(MSG_EXPORT_EMPTY, reply_markup=main_menu())
         return
