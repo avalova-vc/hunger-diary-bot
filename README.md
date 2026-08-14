@@ -65,6 +65,18 @@ python -m bot
 
 На ПК бот работает **только пока запущен процесс**. Для 24/7 см. [DEPLOY.md](DEPLOY.md).
 
+## Обновление на VPS
+
+Кратко:
+
+```bash
+cd ~/hunger-diary-bot && git pull
+sudo bash deploy/vps-update.sh
+python3.12 /opt/hunger-bot/deploy/verify_db.py
+```
+
+Подробности, формат `.env`, добавление второго пользователя и миграция БД — в [DEPLOY.md](DEPLOY.md).
+
 ## Команды в боте
 
 | Действие | Как |
@@ -83,7 +95,7 @@ hunger-diary-bot/
 │   ├── services/        # CSV, логика напоминаний
 │   ├── models/          # SQLAlchemy / SQLite
 │   └── ...
-├── deploy/              # systemd + install.sh для VPS
+├── deploy/              # install.sh, vps-update.sh, migrate_env.py, verify_db.py
 ├── CONTEXT.md           # продукт и границы MVP
 ├── ARCHITECTURE.md      # техническая архитектура
 ├── UI_COPY.md           # тексты кнопок и сообщений
@@ -100,7 +112,7 @@ hunger-diary-bot/
 | [SUMMARY.md](SUMMARY.md) | Статус, решения, ссылки, подводные камни |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Стек, БД, напоминания, деплой |
 | [UI_COPY.md](UI_COPY.md) | Все тексты интерфейса |
-| [DEPLOY.md](DEPLOY.md) | VPS + systemd |
+| [DEPLOY.md](DEPLOY.md) | VPS + systemd + **обновление и миграция** |
 
 ## Безопасность
 
