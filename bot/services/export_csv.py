@@ -4,7 +4,7 @@ import csv
 from datetime import date
 from pathlib import Path
 
-from bot.repositories import MEAL_LABELS, Repository, format_local_iso
+from bot.repositories import MEAL_LABELS, Repository, event_effective_at, format_local_iso
 
 
 def export_events_to_csv(repo: Repository, user_id: int, exports_dir: Path) -> tuple[Path | None, int]:
@@ -31,7 +31,7 @@ def export_events_to_csv(repo: Repository, user_id: int, exports_dir: Path) -> t
             writer.writerow(
                 {
                     "id": event.id,
-                    "datetime": format_local_iso(event.created_at, repo.timezone_name),
+                    "datetime": format_local_iso(event_effective_at(event), repo.timezone_name),
                     "event_type": event.event_type,
                     "hunger_level": event.hunger_level if event.hunger_level is not None else "",
                     "meal_type": MEAL_LABELS.get(event.meal_type or "", event.meal_type or ""),

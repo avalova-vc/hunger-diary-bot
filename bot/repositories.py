@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime, time, timezone
+from datetime import datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from bot.models import Event, ReminderLog, Settings
@@ -33,6 +33,34 @@ def format_local_time(dt_utc: datetime, tz_name: str) -> str:
 def format_local_iso(dt_utc: datetime, tz_name: str) -> str:
     aware = dt_utc.replace(tzinfo=timezone.utc).astimezone(ZoneInfo(tz_name))
     return aware.isoformat(timespec="minutes")
+
+
+def event_effective_at(event: Event) -> datetime:
+    if event.event_type == "meal" and event.ate_at is not None:
+        return event.ate_at
+    return event.created_at
+
+
+def _effective_at_column():
+    return case((Event.ate_at.isnot(None), Event.ate_at), else_=Event.created_at)
+
+
+def meal_datetime_from_offset(minutes_ago: int) -> datetime:
+    return utc_now() - timedelta(minutes=minutes_ago)
+
+
+def meal_datetime_from_hhmm(value: str, tz_name: str) -> datetime:
+    parsed = parse_hhmm(value)
+    local_now = datetime.now(ZoneInfo(tz_name))
+    candidate = local_now.replace(
+        hour=parsed.hour,
+        minute=parsed.minute,
+        second=0,
+        microsecond=0,
+    )
+    if candidate > local_now:
+        candidate -= timedelta(days=1)
+    return candidate.astimezone(timezone.utc).replace(tzinfo=None)
 
 
 class Repository:
@@ -96,7 +124,14 @@ class Repository:
             session.expunge(event)
             return event
 
-    def add_meal(self, user_id: int, meal_type: str, hunger_before: int, satiety_after: int) -> Event:
+    def add_meal(
+        self,
+        user_id: int,
+        meal_type: str,
+        hunger_before: int,
+        satiety_after: int,
+        ate_at: datetime,
+    ) -> Event:
         with self._session() as session:
             event = Event(
                 user_id=user_id,
@@ -105,6 +140,7 @@ class Repository:
                 meal_type=meal_type,
                 hunger_before=hunger_before,
                 satiety_after=satiety_after,
+                ate_at=ate_at,
             )
             session.add(event)
             session.commit()
@@ -118,7 +154,7 @@ class Repository:
                 session.scalars(
                     select(Event)
                     .where(Event.user_id == user_id)
-                    .order_by(Event.created_at.asc())
+                    .order_by(_effective_at_column().asc())
                 )
             )
             for event in events:
@@ -137,10 +173,10 @@ class Repository:
             event = session.scalars(
                 select(Event)
                 .where(Event.user_id == user_id)
-                .order_by(Event.created_at.desc())
+                .order_by(_effective_at_column().desc())
                 .limit(1)
             ).first()
-            return event.created_at if event else None
+            return event_effective_at(event) if event else None
 
     def last_morning_at(self, user_id: int) -> datetime | None:
         with self._session() as session:

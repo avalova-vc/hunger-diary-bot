@@ -37,3 +37,18 @@ def meal_type_keyboard() -> InlineKeyboardMarkup:
             [InlineKeyboardButton(text="Отмена", callback_data="meal_type:cancel")],
         ]
     )
+
+
+def meal_time_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="Сейчас", callback_data="meal_time:0")],
+            [
+                InlineKeyboardButton(text="15 мин назад", callback_data="meal_time:15"),
+                InlineKeyboardButton(text="30 мин назад", callback_data="meal_time:30"),
+            ],
+            [InlineKeyboardButton(text="1 час назад", callback_data="meal_time:60")],
+            [InlineKeyboardButton(text="Ввести время", callback_data="meal_time:manual")],
+            [InlineKeyboardButton(text="Отмена", callback_data="meal_time:cancel")],
+        ]
+    )

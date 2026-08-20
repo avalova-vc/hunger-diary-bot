@@ -32,6 +32,7 @@ class Event(Base):
     meal_type: Mapped[str | None] = mapped_column(String(16), nullable=True)
     hunger_before: Mapped[int | None] = mapped_column(Integer, nullable=True)
     satiety_after: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    ate_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class ReminderLog(Base):

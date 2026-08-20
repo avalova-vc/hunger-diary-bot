@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import logging
+
 from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 def _table_exists(engine: Engine, name: str) -> bool:
@@ -40,17 +41,11 @@ def _set_version(engine: Engine, version: int) -> None:
         conn.execute(text("INSERT INTO schema_meta (id, version) VALUES (1, :v)"), {"v": version})
 
 
-def run_migrations(engine: Engine, legacy_user_id: int, all_user_ids: list[int]) -> None:
-    version = _current_version(engine)
-    if version >= SCHEMA_VERSION:
-        return
-
+def _migrate_v2(engine: Engine, legacy_user_id: int) -> None:
     if not _table_exists(engine, "events"):
-        logger.info("Fresh database — schema v%s will be created", SCHEMA_VERSION)
-        _set_version(engine, SCHEMA_VERSION)
         return
 
-    logger.info("Migrating database to schema v%s (legacy user_id=%s)", SCHEMA_VERSION, legacy_user_id)
+    logger.info("Migrating database to schema v2 (legacy user_id=%s)", legacy_user_id)
 
     with engine.begin() as conn:
         if not _column_exists(engine, "events", "user_id"):
@@ -87,5 +82,49 @@ def run_migrations(engine: Engine, legacy_user_id: int, all_user_ids: list[int])
             conn.execute(text("DROP TABLE settings"))
             conn.execute(text("ALTER TABLE settings_new RENAME TO settings"))
 
-    _set_version(engine, SCHEMA_VERSION)
-    logger.info("Migration complete")
+    logger.info("Migration to schema v2 complete")
+
+
+def _migrate_v3(engine: Engine) -> None:
+    if not _table_exists(engine, "events"):
+        return
+
+    if _column_exists(engine, "events", "ate_at"):
+        return
+
+    logger.info("Migrating database to schema v3 (ate_at for meals)")
+
+    with engine.begin() as conn:
+        conn.execute(text("ALTER TABLE events ADD COLUMN ate_at DATETIME"))
+        conn.execute(
+            text(
+                "UPDATE events SET ate_at = created_at "
+                "WHERE event_type = 'meal' AND ate_at IS NULL"
+            )
+        )
+
+    logger.info("Migration to schema v3 complete")
+
+
+def run_migrations(engine: Engine, legacy_user_id: int, all_user_ids: list[int]) -> None:
+    del all_user_ids  # reserved for future per-user bootstrap migrations
+
+    version = _current_version(engine)
+
+    if not _table_exists(engine, "events"):
+        logger.info("Fresh database — schema v%s will be created", SCHEMA_VERSION)
+        _set_version(engine, SCHEMA_VERSION)
+        return
+
+    if version < 2:
+        _migrate_v2(engine, legacy_user_id)
+        version = 2
+        _set_version(engine, version)
+
+    if version < 3:
+        _migrate_v3(engine)
+        version = 3
+        _set_version(engine, version)
+
+    if version < SCHEMA_VERSION:
+        _set_version(engine, SCHEMA_VERSION)
