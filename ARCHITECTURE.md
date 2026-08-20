@@ -45,7 +45,7 @@ flowchart TB
 | Слой | Технология | Почему |
 |------|------------|--------|
 | Язык | **Python 3.11+** | Простая работа с CSV, SQLite, быстрый MVP |
-| Telegram | **aiogram 3.x** | Async, inline-кнопки, FSM для сценария «Поела» |
+| Telegram | **aiogram 3.x** | Async, inline-кнопки, FSM для сценария «Поел(-а)» |
 | БД | **SQLite** | Один файл, без сервера, достаточно для 1 пользователя |
 | ORM / SQL | **SQLAlchemy 2** или чистый SQL | Структурированные модели, миграции при росте |
 | Планировщик | **APScheduler** | Утреннее напоминание + периодическая проверка «2 часа без записей» |
@@ -75,7 +75,7 @@ flowchart TB
     ├── handlers/
     │   ├── start.py      # /start, главное меню
     │   ├── hunger.py     # запись голода
-    │   ├── meal.py       # сценарий «Поела»
+    │   ├── meal.py       # сценарий «Поел(-а)»
     │   └── export.py     # /export
     ├── keyboards/        # inline- и reply-клавиатуры
     ├── models/           # SQLAlchemy-модели
@@ -98,18 +98,23 @@ flowchart TB
 
 ### 4.2 FSM — сценарий «Поел(-а)»
 
-Короткий пошаговый диалог (≤3 нажатия после старта):
+Пошаговый диалог. Типичный случай после старта: тип → голод → сытость → **Сейчас** (4 нажатия).
 
 ```
-[Поел(-а)] → тип приёма → голод до (0–10) → сытость после (0–10) → сохранение → главное меню
+[Поел(-а)] → тип → голод до (0–10) → сытость после (0–10) → время приёма → сохранение
 ```
 
 Состояния FSM:
 1. `MealStates.choose_type`
 2. `MealStates.hunger_before`
 3. `MealStates.satiety_after`
+4. `MealStates.meal_time` — пресеты: Сейчас / −15 / −30 / −60 мин / Ввести время
+5. `MealStates.meal_time_manual` — ввод `ЧЧ:ММ` (если выбран ручной ввод)
 
-На любом шаге — кнопка «Отмена».
+На любом шаге — кнопка «Отмена» (сбрасывает всю запись, не «назад»).
+
+Время приёма сохраняется в `ate_at` (UTC). `created_at` — момент внесения записи в бот.  
+Ручной `ЧЧ:ММ`: сегодня в локальной TZ; если время ещё в будущем относительно «сейчас» — вчерашний день.
 
 ### 4.3 Запись голода
 
@@ -129,7 +134,7 @@ flowchart TB
 Проверка каждые **15 минут**. Интервал — `USER_{id}_INACTIVITY_HOURS` из `.env` (per-user).
 
 **Активность** = запись голода **или** приёма пищи.  
-`last_activity = max(last_hunger, last_meal)`.
+`last_activity` для meal = `ate_at` (если есть), иначе `created_at`; для hunger = `created_at`.
 
 ```mermaid
 stateDiagram-v2
@@ -165,7 +170,7 @@ stateDiagram-v2
 | Колонка | Описание |
 |---------|----------|
 | `id` | ID записи |
-| `datetime` | ISO 8601 в вашем часовом поясе |
+| `datetime` | ISO 8601 в TZ пользователя; для meal — из `ate_at`, для hunger — из `created_at` |
 | `event_type` | `hunger` / `meal` |
 | `hunger_level` | для hunger |
 | `meal_type` | breakfast / snack / lunch / dinner |
@@ -192,14 +197,15 @@ Excel в Windows открывает UTF-8 CSV с BOM (`utf-8-sig`) — учес�
 |------|-----|----------|
 | `id` | INTEGER PK | |
 | `user_id` | INTEGER | Telegram user ID |
-| `created_at` | DATETIME | UTC в БД; отображение — в local TZ |
+| `created_at` | DATETIME | UTC; когда запись внесена в бот |
 | `event_type` | TEXT | `hunger` \| `meal` |
 | `hunger_level` | INTEGER NULL | 0–10 |
 | `meal_type` | TEXT NULL | breakfast, snack, lunch, dinner |
 | `hunger_before` | INTEGER NULL | 0–10 |
 | `satiety_after` | INTEGER NULL | 0–10 |
+| `ate_at` | DATETIME NULL | UTC; фактическое время приёма пищи (только meal) |
 
-Индекс: `created_at` — для быстрых запросов «последняя активность» и экспорта.
+Индекс: `(user_id, created_at)`. Для inactivity/экспорта meal используется `ate_at`, если задан.
 
 ### Таблица `reminder_log` (служебная)
 
@@ -228,13 +234,14 @@ Excel в Windows открывает UTF-8 CSV с BOM (`utf-8-sig`) — учес�
 
 ---
 
-## 6.1 Миграция БД (v1 → v2)
+## 6.1 Миграция БД
 
 При старте бота (`bot/migrations.py`):
 
-1. Если БД пустая — создаётся schema v2.
-2. Если есть старые таблицы без `user_id` — ALTER + перенос `settings.id=1` → `settings.user_id=legacy`.
-3. Версия фиксируется в `schema_meta`.
+| Версия | Что делает |
+|--------|------------|
+| v2 | `user_id` в events/settings/reminder_log |
+| v3 | `ate_at` для meal; старые meal → `ate_at = created_at` |
 
 Деплой: см. `DEPLOY.md` → `vps-update.sh` (backup перед обновлением).
 
@@ -342,7 +349,7 @@ TIMEZONE=Europe/Kyiv
 
 1. Каркас бота: `/start`, whitelist, главное меню
 2. Запись голода (0–10)
-3. FSM «Поела» + сохранение в SQLite
+3. FSM «Поел(-а)» + сохранение в SQLite
 4. Утреннее напоминание
 5. Inactivity-напоминания (2 шага + пауза до утра)
 6. `/export` → CSV
