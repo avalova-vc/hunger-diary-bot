@@ -1,6 +1,6 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup
 
-from bot.texts import BTN_EXPORT, BTN_HUNGER, BTN_MEAL
+from bot.texts import BTN_EXPORT, BTN_HUNGER, BTN_MEAL, BTN_MEAL_TIME_MANUAL
 
 
 def main_menu() -> ReplyKeyboardMarkup:
@@ -21,6 +21,18 @@ def scale_keyboard(prefix: str, *, with_cancel: bool = True) -> InlineKeyboardMa
     if with_cancel:
         rows.append([InlineKeyboardButton(text="Отмена", callback_data=f"{prefix}:cancel")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def meal_time_keyboard(now_hhmm: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text=f"Сейчас ({now_hhmm})", callback_data="meal_time:now"),
+                InlineKeyboardButton(text=BTN_MEAL_TIME_MANUAL, callback_data="meal_time:manual"),
+            ],
+            [InlineKeyboardButton(text="Отмена", callback_data="meal_time:cancel")],
+        ]
+    )
 
 
 def meal_type_keyboard() -> InlineKeyboardMarkup:

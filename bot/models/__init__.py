@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, time
 
-from sqlalchemy import DateTime, Integer, String, Time, create_engine
+from sqlalchemy import DateTime, Integer, String, Time, create_engine, inspect, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 
@@ -28,6 +28,7 @@ class Event(Base):
     meal_type: Mapped[str | None] = mapped_column(String(16), nullable=True)
     hunger_before: Mapped[int | None] = mapped_column(Integer, nullable=True)
     satiety_after: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    meal_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class ReminderLog(Base):
@@ -41,4 +42,8 @@ class ReminderLog(Base):
 def create_session_factory(db_path: str):
     engine = create_engine(f"sqlite:///{db_path}", future=True)
     Base.metadata.create_all(engine)
+    existing = {column["name"] for column in inspect(engine).get_columns("events")}
+    if "meal_time" not in existing:
+        with engine.begin() as connection:
+            connection.execute(text("ALTER TABLE events ADD COLUMN meal_time DATETIME"))
     return sessionmaker(bind=engine, expire_on_commit=False, future=True)

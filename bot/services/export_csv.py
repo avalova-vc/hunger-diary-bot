@@ -31,7 +31,7 @@ def export_events_to_csv(repo: Repository, exports_dir: Path) -> tuple[Path | No
             writer.writerow(
                 {
                     "id": event.id,
-                    "datetime": format_local_iso(event.created_at, repo.timezone_name),
+                    "datetime": format_local_iso(event.meal_time or event.created_at, repo.timezone_name),
                     "event_type": event.event_type,
                     "hunger_level": event.hunger_level if event.hunger_level is not None else "",
                     "meal_type": MEAL_LABELS.get(event.meal_type or "", event.meal_type or ""),

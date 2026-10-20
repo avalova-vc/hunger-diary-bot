@@ -162,7 +162,7 @@ stateDiagram-v2
 | Колонка | Описание |
 |---------|----------|
 | `id` | ID записи |
-| `datetime` | ISO 8601 в вашем часовом поясе |
+| `datetime` | ISO 8601 в вашем часовом поясе; для `meal` — указанное пользователем время приёма, для `hunger` — время создания записи |
 | `event_type` | `hunger` / `meal` |
 | `hunger_level` | для hunger |
 | `meal_type` | breakfast / snack / lunch / dinner |
@@ -193,8 +193,11 @@ Excel в Windows открывает UTF-8 CSV с BOM (`utf-8-sig`) — учес�
 | `meal_type` | TEXT NULL | breakfast, snack, lunch, dinner |
 | `hunger_before` | INTEGER NULL | 0–10 |
 | `satiety_after` | INTEGER NULL | 0–10 |
+| `meal_time` | DATETIME NULL | указанное пользователем время приёма (UTC в БД); NULL для `hunger` и для записей до обновления — тогда используется `created_at` |
 
 Индекс: `created_at` — для быстрых запросов «последняя активность» и экспорта.
+
+Для существующих баз при старте выполняется миграция: `ALTER TABLE events ADD COLUMN meal_time DATETIME`.
 
 ### Таблица `reminder_log` (служебная)
 

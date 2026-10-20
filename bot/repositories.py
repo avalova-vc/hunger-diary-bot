@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, time, timezone
+from datetime import datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
@@ -23,6 +23,16 @@ def utc_now() -> datetime:
 def parse_hhmm(value: str) -> time:
     hour, minute = value.split(":")
     return time(int(hour), int(minute))
+
+
+def parse_meal_hhmm(value: str, tz_name: str) -> datetime:
+    hhmm = parse_hhmm(value.strip())
+    tz = ZoneInfo(tz_name)
+    local_now = datetime.now(tz)
+    candidate = local_now.replace(hour=hhmm.hour, minute=hhmm.minute, second=0, microsecond=0)
+    if candidate > local_now:
+        candidate -= timedelta(days=1)
+    return candidate.astimezone(timezone.utc).replace(tzinfo=None)
 
 
 def format_local_time(dt_utc: datetime, tz_name: str) -> str:
@@ -92,7 +102,13 @@ class Repository:
             session.expunge(event)
             return event
 
-    def add_meal(self, meal_type: str, hunger_before: int, satiety_after: int) -> Event:
+    def add_meal(
+        self,
+        meal_type: str,
+        hunger_before: int,
+        satiety_after: int,
+        meal_time: datetime,
+    ) -> Event:
         with self._session() as session:
             event = Event(
                 created_at=utc_now(),
@@ -100,6 +116,7 @@ class Repository:
                 meal_type=meal_type,
                 hunger_before=hunger_before,
                 satiety_after=satiety_after,
+                meal_time=meal_time,
             )
             session.add(event)
             session.commit()
